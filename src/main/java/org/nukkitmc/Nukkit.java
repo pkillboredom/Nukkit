@@ -12,6 +12,7 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.fusesource.jansi.AnsiConsole;
 import org.nukkitmc.configuration.file.YamlConfiguration;
+import org.nukkitmc.language.Language;
 import org.nukkitmc.util.Color;
 import org.nukkitmc.util.ConsoleWriter;
 import org.nukkitmc.util.Vector;
@@ -112,10 +113,8 @@ public class Nukkit {
                 Logger logger = LogManager.getLogger(Nukkit.class.getName());
 
                 logger.info("info");
-                logger.warn("warn");
-                logger.error("error");
-                logger.fatal("fatal");
-                logger.debug("debug");
+                logger.info(Language.get("language.name"));
+                logger.info(Language.get("test", "2.0"));
 
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(new File("nukkit.yml"));
                 config.addDefaults(new LinkedHashMap<String, Object>() {
