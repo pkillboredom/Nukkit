@@ -12,7 +12,9 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.fusesource.jansi.AnsiConsole;
 import org.nukkitmc.configuration.file.YamlConfiguration;
+import org.nukkitmc.util.Color;
 import org.nukkitmc.util.ConsoleWriter;
+import org.nukkitmc.util.Vector;
 
 import java.io.File;
 import java.io.IOException;
@@ -120,7 +122,8 @@ public class Nukkit {
                     {
                         put("boolean", true);
                         put("number", 3.1415926);
-                        put("object", new Object());
+                        put("color", Color.RED);
+                        put("vector", Vector.getRandom());
                     }
                 });
                 config.options().copyDefaults(true);
