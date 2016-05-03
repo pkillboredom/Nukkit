@@ -114,7 +114,6 @@ public class Nukkit {
 
                 logger.info("info");
                 logger.info(Language.get("language.name"));
-                logger.info(Language.get("test", "2.0"));
 
                 YamlConfiguration config = YamlConfiguration.loadConfiguration(new File("nukkit.yml"));
                 config.addDefaults(new LinkedHashMap<String, Object>() {
@@ -128,6 +127,23 @@ public class Nukkit {
                 config.options().copyDefaults(true);
                 config.save("nukkit.yml");
                 //TODO start server
+
+                //TODO: REMOVE THIS: TEST JLINE
+                if (useConsole) {
+                    while (true) {
+                        String line;
+                        if (useJline) {
+                            line = reader.readLine(">", null);
+                        } else {
+                            line = reader.readLine();
+                        }
+
+                        if (line != null && !line.trim().isEmpty()) {
+                            logger.info("input: " + line);
+                        }
+                    }
+                }
+
             } catch (Throwable t) {
                 t.printStackTrace();
             }

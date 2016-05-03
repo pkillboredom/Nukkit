@@ -2,6 +2,7 @@ package org.nukkitmc.util;
 
 
 import jline.console.ConsoleReader;
+import jline.console.CursorBuffer;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.fusesource.jansi.Ansi;
@@ -48,6 +49,7 @@ public class ConsoleWriter extends Thread {
     }
 
     private final ConsoleReader reader;
+    private CursorBuffer buffer;
     private final OutputStream output;
     private final ChatColor[] colors = ChatColor.values();
 
@@ -74,16 +76,14 @@ public class ConsoleWriter extends Thread {
 
                 try {
                     if (Nukkit.useJline) {
+                        this.buffer = this.reader.getCursorBuffer().copy();
+                        this.reader.getOutput().write("\u001b[1G\u001b[K");
+                        this.reader.flush();
+
                         this.output.write(message.getBytes());
                         this.output.flush();
 
-                        try {
-                            this.reader.drawLine();
-                        } catch (Throwable var3) {
-                            this.reader.getCursorBuffer().clear();
-                        }
-
-                        this.reader.flush();
+                        this.reader.resetPromptLine(this.reader.getPrompt(), this.buffer.toString(), this.buffer.cursor);
                     } else {
                         this.output.write(message.getBytes());
                         this.output.flush();
