@@ -13,6 +13,11 @@ import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.fusesource.jansi.AnsiConsole;
 import org.nukkitmc.configuration.file.YamlConfiguration;
 import org.nukkitmc.language.Language;
+import org.nukkitmc.module.Module;
+import org.nukkitmc.module.ModuleInfo;
+import org.nukkitmc.module.ModuleManager;
+import org.nukkitmc.module.SimpleModuleManager;
+import org.nukkitmc.plugin.JavaPluginLoader;
 import org.nukkitmc.util.Color;
 import org.nukkitmc.util.ConsoleWriter;
 import org.nukkitmc.util.Vector;
@@ -127,6 +132,14 @@ public class Nukkit {
                 config.options().copyDefaults(true);
                 config.save("nukkit.yml");
                 //TODO start server
+
+                //// TODO: 2016/5/13 Remove this, test ModuleManager
+                ModuleManager moduleManager = new SimpleModuleManager();
+                moduleManager.addLoader(new JavaPluginLoader());
+                for (ModuleInfo info : moduleManager.getModuleList()) {
+                    Module module = moduleManager.getModule(info);
+                    logger.info("Name: `"+info.getName()+"` Version: `"+info.getVersion()+"` Module Class: `"+module.getClass().getName()+"`");
+                }
 
                 //TODO: REMOVE THIS: TEST JLINE
                 if (useConsole) {
