@@ -66,9 +66,11 @@ public class JavaPluginLoader implements ModuleLoader {
 
     @Override
     public Module loadModule(ModuleInfo info) {
-        if (!files.keySet().contains(info)) return new DummyJavaPlugin();
+        if (loaded.containsKey(info)) return loaded.get(info);
+        if (!files.keySet().contains(info)) return dummyJavaPlugin();
         File file = files.get(info);
-        if (file == null) return new DummyJavaPlugin();
+        if (file == null) return dummyJavaPlugin();
+        if (!file.exists()) return dummyJavaPlugin();
         ClassLoader cl = initClassLoader(file);
         if (classLoaders.keySet().contains(info)) {
             // unload all classes by set ClassLoader null
@@ -80,23 +82,26 @@ public class JavaPluginLoader implements ModuleLoader {
             config = readPluginYaml(file);
         } catch (IOException e) {
             // TODO: 2016/5/13 Exception log
-            return new DummyJavaPlugin();
+            return dummyJavaPlugin();
         }
-        if (config == null) return new DummyJavaPlugin();
+        if (config == null) return dummyJavaPlugin();
         String mainClassName = config.getString("main");
         try {
             Class<? extends Plugin> pluginClass = cl.loadClass(mainClassName).asSubclass(Plugin.class);
             Plugin plugin = pluginClass.newInstance();
-            return new JavaPluginModule(info, plugin);
+            JavaPluginModule module = new JavaPluginModule(info, plugin, this);
+            loaded.put(info, module);
+            return module;
         } catch (Exception e) {
             e.printStackTrace();
             //// TODO: 2016/5/13 Exception log
-            return new DummyJavaPlugin();
+            return dummyJavaPlugin();
         }
     }
 
     @Override
     public void unloadModule(ModuleInfo info) {
+        loaded.put(info, null);
         classLoaders.put(info, null);
     }
 
@@ -117,13 +122,25 @@ public class JavaPluginLoader implements ModuleLoader {
         return YamlConfiguration.loadConfiguration(reader);
     }
 
+    DummyJavaPlugin dummyJavaPlugin = new DummyJavaPlugin(this);
+    private DummyJavaPlugin dummyJavaPlugin() {
+        return dummyJavaPlugin;
+    }
+
     // A wrapper that wraps a plugin into a module
     private class JavaPluginModule implements Module {
         ModuleInfo info;
         Plugin plugin;
-        JavaPluginModule(ModuleInfo info, Plugin plugin) {
+        ModuleLoader loader;
+        JavaPluginModule(ModuleInfo info, Plugin plugin, ModuleLoader loader) {
             this.info = info;
             this.plugin = plugin;
+            this.loader = loader;
+        }
+
+        @Override
+        public ModuleLoader getLoader() {
+            return loader;
         }
 
         @Override
@@ -138,10 +155,18 @@ public class JavaPluginLoader implements ModuleLoader {
         public void unload() {
             //// TODO: 2016/5/13 unload all plugin constants
             plugin = null;
+            getLoader().unloadModule(this.getModuleInfo());
         }
     }
 
     private class DummyJavaPlugin implements Module {
+        ModuleLoader loader;
+        DummyJavaPlugin(ModuleLoader loader) {
+            this.loader = loader;
+        }
+        @Override
+        public ModuleLoader getLoader() { return null; }
+
         @Override
         public ModuleInfo getModuleInfo() { return new JavaPluginInfo(null, null, null); }
 

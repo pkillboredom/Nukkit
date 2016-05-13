@@ -139,6 +139,8 @@ public class Nukkit {
                 for (ModuleInfo info : moduleManager.getModuleList()) {
                     Module module = moduleManager.getModule(info);
                     logger.info("Name: `"+info.getName()+"` Version: `"+info.getVersion()+"` Module Class: `"+module.getClass().getName()+"`");
+                    module.unload();
+                    System.gc();
                 }
 
                 //TODO: REMOVE THIS: TEST JLINE

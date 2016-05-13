@@ -6,6 +6,8 @@ package org.nukkitmc.module;
  */
 public interface Module {
 
+    ModuleLoader getLoader();
+
     ModuleInfo getModuleInfo();
 
     void load();
