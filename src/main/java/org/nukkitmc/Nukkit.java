@@ -12,6 +12,10 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.fusesource.jansi.AnsiConsole;
 import org.nukkitmc.configuration.file.YamlConfiguration;
+import org.nukkitmc.event.ConsoleInputEvent;
+import org.nukkitmc.event.ConsoleInputListener;
+import org.nukkitmc.event.EventManager;
+import org.nukkitmc.event.SimpleEventManager;
 import org.nukkitmc.language.FileLanguageProvider;
 import org.nukkitmc.language.Language;
 import org.nukkitmc.module.Module;
@@ -152,6 +156,15 @@ public class Nukkit {
                 System.gc();
             }
 
+            //// TODO: 2016/5/14 Remove, test event listener
+            EventManager eventManager = new SimpleEventManager();
+            eventManager.addListener(new ConsoleInputListener(){
+                @Override
+                public void onConsoleInput(ConsoleInputEvent event) {
+                    logger.info("Input: "+event.getInput()+" from "+event.getSource().toString());
+                }
+            });
+
             //TODO: REMOVE THIS: TEST JLINE
             if (useConsole) {
                 while (true) {
@@ -163,7 +176,8 @@ public class Nukkit {
                     }
 
                     if (line != null && !line.trim().isEmpty()) {
-                        logger.info("input: " + line);
+                        //logger.info("input: " + line);
+                        eventManager.processEvent(new ConsoleInputEvent(Nukkit.class, line));
                     }
                 }
             }

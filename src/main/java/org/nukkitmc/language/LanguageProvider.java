@@ -8,8 +8,6 @@ import java.util.Locale;
  */
 public interface LanguageProvider {
 
-    void checkLocale(Locale locale);
-
     String get(Locale locale, String key);
 
     String get(Locale locale, String key, Object... args);

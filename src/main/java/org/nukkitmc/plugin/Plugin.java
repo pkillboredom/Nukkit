@@ -6,9 +6,4 @@ package org.nukkitmc.plugin;
  */
 public interface Plugin {
 
-    default void onLoad() {}
-
-    default void onEnable() {}
-
-    default void onDisable() {}
 }

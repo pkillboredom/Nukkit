@@ -24,7 +24,22 @@ public class FileLanguageProvider implements LanguageProvider {
     private Map<Locale, Map<String, String>> loaded = new HashMap<>();
 
     @Override
-    public void checkLocale(Locale locale) {
+    public synchronized String get(Locale locale, String key) {
+        return this.getFormat(locale, key);
+    }
+
+    @Override
+    public synchronized String get(Locale locale, String key, Object... args) {
+        String format = this.getFormat(locale, key);
+
+        try {
+            return String.format(format, args);
+        } catch (IllegalFormatException var5) {
+            return "Format error: " + format;
+        }
+    }
+
+    private void checkLocale(Locale locale) {
         try {
             InputStream stream = getInputStreamFromLocale(locale);
             if (stream == null) {
@@ -51,22 +66,6 @@ public class FileLanguageProvider implements LanguageProvider {
 
     private InputStream getInputStreamFromLocale(Locale locale) {
         return FileLanguageProvider.class.getResourceAsStream("/org/nukkitmc/language/" + locale.toString() + ".lang");
-    }
-
-    @Override
-    public synchronized String get(Locale locale, String key) {
-        return this.getFormat(locale, key);
-    }
-
-    @Override
-    public synchronized String get(Locale locale, String key, Object... args) {
-        String format = this.getFormat(locale, key);
-
-        try {
-            return String.format(format, args);
-        } catch (IllegalFormatException var5) {
-            return "Format error: " + format;
-        }
     }
 
     private String getFormat(Locale locale, String key) {
