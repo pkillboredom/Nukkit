@@ -25,67 +25,48 @@ import java.util.regex.Pattern;
  * A simple hot-swap-supported plugin loader
  * for plugins as jar file in '/plugins' folder and a 'plugin.yml' inside.
  */
-public class JavaPluginLoader implements ModuleLoader {
+public class JavaPluginLoader extends JarFileFolderLoader {
 
-    private File pluginFolder = new File(System.getProperty("user.dir"), "plugins");
-    private Map<ModuleInfo, ClassLoader> classLoaders = new HashMap<>();
-    private Map<ModuleInfo, File> files = new HashMap<>();
-    private Map<ModuleInfo, JavaPluginModule> loaded = new HashMap<>();
+    // Class names like:  org.nukkitmc.*   net.nukkitmc.*   com.nukkitmc.*   net.minecraft.*
+    // is disallowed in a java plugin
+    private Pattern disallowedName = Pattern.compile("(^(com|org|net)\\.nukkitmc\\.|^net\\.minecraft\\.)");
+
+    public JavaPluginLoader() {
+        super(new File(System.getProperty("user.dir"), "plugins"));
+    }
+
+    /******************** Internal Part ********************/
 
     @Override
-    public ModuleInfo[] getModuleList() {
-        if (!pluginFolder.exists()) {
-            boolean v = pluginFolder.mkdir();
-            if (!v) return new ModuleInfo[0];
+    protected ModuleInfo[] acceptFile(File aFile) {
+        ModuleInfo info;
+        Configuration config;
+        try {
+            config = readPluginYaml(aFile);
+        } catch (IOException e) {
+            // TODO: 2016/5/13 Exception log
+            return new ModuleInfo[0];
         }
-        if (!pluginFolder.isDirectory()) return new ModuleInfo[0];
-        File[] listFiles = pluginFolder.listFiles();
-        if (listFiles == null) return new ModuleInfo[0];
-        List<ModuleInfo> listInfo = new ArrayList<>();
-        files.clear();
-        for (File aFile : listFiles) {
-            if (aFile.isDirectory()) continue;
-            if (!aFile.getName().endsWith(".jar")) continue;
-            ModuleInfo info;
-            Configuration config;
-            try {
-                config = readPluginYaml(aFile);
-            } catch (IOException e) {
-                // TODO: 2016/5/13 Exception log
-                continue;
-            }
-            if (config == null) continue;
-            String name = config.getString("name");
-            String version = config.getString("version");
-            info = new JavaPluginInfo(name, version, null); //// TODO: 2016/5/13 depends
-            listInfo.add(info);
-            files.put(info, aFile);
-        }
-        return listInfo.toArray(new ModuleInfo[listInfo.size()]);
+        if (config == null) return new ModuleInfo[0];
+        String name = config.getString("name");
+        String version = config.getString("version");
+        info = new JavaPluginInfo(name, version, null); //// TODO: 2016/5/13 depends
+        return new ModuleInfo[]{info};
     }
 
     @Override
-    public Module loadModule(ModuleInfo info) {
-        if (loaded.containsKey(info)) return loaded.get(info);
-        if (!files.keySet().contains(info)) return dummyJavaPlugin();
-        File file = files.get(info);
-        if (file == null) return dummyJavaPlugin();
-        if (!file.exists()) return dummyJavaPlugin();
-        ClassLoader cl = initClassLoader(file);
-        if (classLoaders.keySet().contains(info)) {
-            // unload all classes by set ClassLoader null
-            classLoaders.put(info, null);
-        }
-        classLoaders.put(info, cl);
+    protected Module acceptJavaModuleLoad(ModuleInfo info, File file, ClassLoader cl) {
         Configuration config;
         try {
             config = readPluginYaml(file);
         } catch (IOException e) {
             // TODO: 2016/5/13 Exception log
-            return dummyJavaPlugin();
+            return null;
         }
-        if (config == null) return dummyJavaPlugin();
+        if (config == null) return null;
         String mainClassName = config.getString("main");
+        if (disallowedName.matcher(mainClassName).matches()) return null;
+        //todo throw new ClassNotFoundException("Class name `"+mainClassName+"` is disallowed in a java plugin.");
         try {
             Class<? extends Plugin> pluginClass = cl.loadClass(mainClassName).asSubclass(Plugin.class);
             Plugin plugin = pluginClass.newInstance();
@@ -95,25 +76,13 @@ public class JavaPluginLoader implements ModuleLoader {
         } catch (Exception e) {
             e.printStackTrace();
             //// TODO: 2016/5/13 Exception log
-            return dummyJavaPlugin();
+            return null;
         }
     }
 
     @Override
-    public void unloadModule(ModuleInfo info) {
+    protected void acceptJavaModuleUnload(ModuleInfo info, File file) {
         // TODO: 2016/5/14 check depend
-        loaded.put(info, null);
-        classLoaders.put(info, null);
-    }
-
-    /******************** Internal Part ********************/
-
-    private ClassLoader initClassLoader(File file) {
-        ClassLoader cl = null;
-        try {
-            cl = new JavaPluginClassLoader(file, this.getClass().getClassLoader());
-        } catch (MalformedURLException ignore) {}
-        return cl;
     }
 
     private Configuration readPluginYaml(File file) throws IOException {
@@ -123,11 +92,6 @@ public class JavaPluginLoader implements ModuleLoader {
         InputStream is = jarFile.getInputStream(jarEntry);
         InputStreamReader reader = new InputStreamReader(is);
         return YamlConfiguration.loadConfiguration(reader);
-    }
-
-    DummyJavaPlugin dummyJavaPlugin = new DummyJavaPlugin(this);
-    private DummyJavaPlugin dummyJavaPlugin() {
-        return dummyJavaPlugin;
     }
 
     // A wrapper that wraps a plugin into a module
@@ -167,40 +131,6 @@ public class JavaPluginLoader implements ModuleLoader {
         }
     }
 
-    private class DummyJavaPlugin implements Module {
-        ModuleLoader loader;
-        DummyJavaPlugin(ModuleLoader loader) {
-            this.loader = loader;
-        }
-        @Override
-        public ModuleLoader getLoader() { return null; }
-
-        @Override
-        public ModuleInfo getModuleInfo() { return new JavaPluginInfo(null, null, null); }
-
-        @Override
-        public void load() {}
-
-        @Override
-        public void unload() {}
-    }
-
-    private class JavaPluginClassLoader extends URLClassLoader {
-        // Class names like:  org.nukkitmc.*   net.nukkitmc.*   com.nukkitmc.*   net.minecraft.*
-        // is disallowed in a java plugin
-        Pattern disallowedName = Pattern.compile("(^(com|org|net)\\.nukkitmc\\.|^net\\.minecraft\\.)");
-
-        public JavaPluginClassLoader(File file, ClassLoader parent) throws MalformedURLException {
-            super(new URL[]{file.toURI().toURL()}, parent);
-        }
-        @Override
-        protected Class<?> findClass(String name) throws ClassNotFoundException {
-            if (disallowedName.matcher(name).matches())
-                throw new ClassNotFoundException("Class name `"+name+"` is disallowed in a java plugin.");
-            return super.findClass(name);
-        }
-    }
-
     private class JavaPluginInfo implements ModuleInfo {
         String name;
         String version;
@@ -230,7 +160,7 @@ public class JavaPluginLoader implements ModuleLoader {
 
         @Override
         public String toString() {
-            return "Name: `"+name +"` Version: `"+version+"`";
+            return "JavaPluginInfo Name: `"+name +"` Version: `"+version+"`";
         }
     }
 

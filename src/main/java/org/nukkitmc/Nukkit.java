@@ -22,6 +22,7 @@ import org.nukkitmc.module.Module;
 import org.nukkitmc.module.ModuleInfo;
 import org.nukkitmc.module.ModuleManager;
 import org.nukkitmc.module.SimpleModuleManager;
+import org.nukkitmc.plugin.JavaLibraryLoader;
 import org.nukkitmc.plugin.JavaPluginLoader;
 import org.nukkitmc.util.Color;
 import org.nukkitmc.util.ConsoleWriter;
@@ -149,10 +150,13 @@ public class Nukkit {
             //// TODO: 2016/5/13 Remove this, test ModuleManager
             ModuleManager moduleManager = new SimpleModuleManager();
             moduleManager.addLoader(new JavaPluginLoader());
+            moduleManager.addLoader(new JavaLibraryLoader());
             for (ModuleInfo info : moduleManager.getModuleList()) {
+                logger.debug("Loading module: "+info.toString());
                 Module module = moduleManager.getModule(info);
                 logger.debug("Loaded module: "+module.toString());
                 module.unload();
+                logger.debug("Unloaded module: "+info.toString());
                 System.gc();
             }
 
