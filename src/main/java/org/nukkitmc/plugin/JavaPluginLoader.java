@@ -101,6 +101,7 @@ public class JavaPluginLoader implements ModuleLoader {
 
     @Override
     public void unloadModule(ModuleInfo info) {
+        // TODO: 2016/5/14 check depend
         loaded.put(info, null);
         classLoaders.put(info, null);
     }
