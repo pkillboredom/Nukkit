@@ -28,7 +28,7 @@ public class FileLanguageProvider implements LanguageProvider {
         try {
             InputStream stream = getInputStreamFromLocale(locale);
             if (stream == null) {
-                locale = Locale.forLanguageTag(locale.getCountry());
+                locale = Locale.forLanguageTag(locale.getLanguage());
                 stream = getInputStreamFromLocale(locale);
             }
             if (stream == null) {
