@@ -105,6 +105,8 @@ public class JavaPluginLoader implements ModuleLoader {
         classLoaders.put(info, null);
     }
 
+    /******************** Internal Part ********************/
+
     private ClassLoader initClassLoader(File file) {
         ClassLoader cl = null;
         try {
@@ -156,6 +158,11 @@ public class JavaPluginLoader implements ModuleLoader {
             //// TODO: 2016/5/13 unload all plugin constants
             plugin = null;
             getLoader().unloadModule(this.getModuleInfo());
+        }
+
+        @Override
+        public String toString() {
+            return "JavaPluginModule "+info.toString()+"  Loader: "+loader.toString()+" Plugin: "+plugin.toString();
         }
     }
 
@@ -218,6 +225,11 @@ public class JavaPluginLoader implements ModuleLoader {
             ModuleInfo target = (ModuleInfo) obj;
             return Objects.equals(getName(), target.getName())
                     && Objects.equals(getVersion(), target.getVersion());
+        }
+
+        @Override
+        public String toString() {
+            return "Name: `"+name +"` Version: `"+version+"`";
         }
     }
 
