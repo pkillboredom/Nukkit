@@ -3,6 +3,7 @@ package org.nukkitmc.plugin;
 import org.nukkitmc.module.Module;
 import org.nukkitmc.module.ModuleInfo;
 import org.nukkitmc.module.ModuleLoader;
+import org.nukkitmc.module.ModuleManager;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -17,11 +18,13 @@ import java.util.*;
 abstract class JarFileFolderLoader implements ModuleLoader {
 
     private File folder;
+    private ModuleManager manager;
     protected Map<ModuleInfo, ClassLoader> classLoaders = new HashMap<>();
     protected Map<ModuleInfo, Module> loaded = new HashMap<>();
     protected Map<ModuleInfo, File> files = new HashMap<>();
 
-    JarFileFolderLoader(File folder) {
+    JarFileFolderLoader(ModuleManager manager, File folder) {
+        this.manager = manager;
         this.folder = folder;
     }
 
@@ -46,6 +49,7 @@ abstract class JarFileFolderLoader implements ModuleLoader {
 
     @Override
     public final Module loadModule(ModuleInfo info) {
+        if (info == null) return null;
         if (loaded.containsKey(info)) return loaded.get(info);
         if (!files.keySet().contains(info)) return null;
         File file = files.get(info);
@@ -57,6 +61,14 @@ abstract class JarFileFolderLoader implements ModuleLoader {
             classLoaders.put(info, null);
         }
         classLoaders.put(info, cl);
+        if (info.getDepends() != null) if (info.getDepends().length != 0) for (ModuleInfo depend: info.getDepends()){
+            final ModuleInfo[] found = {null};
+            Arrays.asList(manager.getModuleList()).forEach((i) -> {
+                if (found[0] != null) return;
+                if (Objects.equals(i, depend)) found[0] = i;
+            });
+            if (found[0] != null) manager.getModule(found[0]);
+        }
         Module ans = acceptJavaModuleLoad(info, file, cl);
         return ans == null?null:ans;
     }
@@ -88,6 +100,17 @@ abstract class JarFileFolderLoader implements ModuleLoader {
             super(new URL[]{file.toURI().toURL()}, parent);
         }
 
+    }
+
+    protected abstract class SimpleModuleInfo implements ModuleInfo {
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) return false;
+            if (!(obj instanceof ModuleInfo)) return false;
+            ModuleInfo target = (ModuleInfo) obj;
+            return Objects.equals(getName(), target.getName())
+                    && Objects.equals(getVersion(), target.getVersion());
+        }
     }
 
 }

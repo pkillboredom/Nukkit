@@ -23,6 +23,7 @@ public class SimpleModuleManager implements ModuleManager {
     @Override
     public Module getModule(ModuleInfo info) {
         final Module[] ans = {null};
+        loaders.forEach(ModuleLoader::getModuleList);
         loaders.forEach((l) -> {
             if (ans[0] != null) return;
             ans[0] = l.loadModule(info);

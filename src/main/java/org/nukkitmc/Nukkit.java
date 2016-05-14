@@ -149,8 +149,8 @@ public class Nukkit {
 
             //// TODO: 2016/5/13 Remove this, test ModuleManager
             ModuleManager moduleManager = new SimpleModuleManager();
-            moduleManager.addLoader(new JavaPluginLoader());
-            moduleManager.addLoader(new JavaLibraryLoader());
+            moduleManager.addLoader(new JavaPluginLoader(moduleManager));
+            moduleManager.addLoader(new JavaLibraryLoader(moduleManager));
             for (ModuleInfo info : moduleManager.getModuleList()) {
                 logger.debug("Loading module: "+info.toString());
                 Module module = moduleManager.getModule(info);

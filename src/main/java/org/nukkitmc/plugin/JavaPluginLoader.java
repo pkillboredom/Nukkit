@@ -5,6 +5,7 @@ import org.nukkitmc.configuration.file.YamlConfiguration;
 import org.nukkitmc.module.Module;
 import org.nukkitmc.module.ModuleInfo;
 import org.nukkitmc.module.ModuleLoader;
+import org.nukkitmc.module.ModuleManager;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,8 +32,8 @@ public class JavaPluginLoader extends JarFileFolderLoader {
     // is disallowed in a java plugin
     private Pattern disallowedName = Pattern.compile("(^(com|org|net)\\.nukkitmc\\.|^net\\.minecraft\\.)");
 
-    public JavaPluginLoader() {
-        super(new File(System.getProperty("user.dir"), "plugins"));
+    public JavaPluginLoader(ModuleManager manager) {
+        super(manager, new File(System.getProperty("user.dir"), "plugins"));
     }
 
     /******************** Internal Part ********************/
@@ -50,7 +51,18 @@ public class JavaPluginLoader extends JarFileFolderLoader {
         if (config == null) return new ModuleInfo[0];
         String name = config.getString("name");
         String version = config.getString("version");
-        info = new JavaPluginInfo(name, version, null); //// TODO: 2016/5/13 depends
+        @SuppressWarnings("unchecked")
+        Map<String, Object> depends = config.getConfigurationSection("depend").getValues(false);
+        List<ModuleInfo> dependList = new ArrayList<>();
+        depends.forEach((n, v) -> dependList.add(new ModuleInfo() {
+            @Override
+            public String getName() { return n; }
+            @Override
+            public String getVersion() { return String.valueOf(v); }
+            @Override
+            public ModuleInfo[] getDepends() { return new ModuleInfo[0]; }
+        }));
+        info = new JavaPluginInfo(name, version, dependList.toArray(new ModuleInfo[dependList.size()]));
         return new ModuleInfo[]{info};
     }
 
@@ -127,11 +139,12 @@ public class JavaPluginLoader extends JarFileFolderLoader {
 
         @Override
         public String toString() {
-            return "JavaPluginModule "+info.toString()+"  Loader: "+loader.toString()+" Plugin: "+plugin.toString();
+            return "JavaPluginModule Name: `"+info.getName()+"` Version: `"+info.getVersion()+
+                    "`  Loader: "+loader.toString()+" Plugin: "+plugin.toString();
         }
     }
 
-    private class JavaPluginInfo implements ModuleInfo {
+    private class JavaPluginInfo extends SimpleModuleInfo {
         String name;
         String version;
         ModuleInfo[] depends;
@@ -148,15 +161,6 @@ public class JavaPluginLoader extends JarFileFolderLoader {
 
         @Override
         public ModuleInfo[] getDepends() { return depends ;}
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) return false;
-            if (!(obj instanceof ModuleInfo)) return false;
-            ModuleInfo target = (ModuleInfo) obj;
-            return Objects.equals(getName(), target.getName())
-                    && Objects.equals(getVersion(), target.getVersion());
-        }
 
         @Override
         public String toString() {

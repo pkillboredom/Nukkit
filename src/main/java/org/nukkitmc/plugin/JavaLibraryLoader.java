@@ -3,8 +3,10 @@ package org.nukkitmc.plugin;
 import org.nukkitmc.module.Module;
 import org.nukkitmc.module.ModuleInfo;
 import org.nukkitmc.module.ModuleLoader;
+import org.nukkitmc.module.ModuleManager;
 
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -23,8 +25,8 @@ import java.util.zip.ZipInputStream;
  */
 public class JavaLibraryLoader extends JarFileFolderLoader {
 
-    public JavaLibraryLoader() {
-        super(new File(System.getProperty("user.dir"), "libraries"));
+    public JavaLibraryLoader(ModuleManager moduleManager) {
+        super(moduleManager, new File(System.getProperty("user.dir"), "libraries"));
     }
 
 
@@ -40,7 +42,20 @@ public class JavaLibraryLoader extends JarFileFolderLoader {
     @Override
     protected Module acceptJavaModuleLoad(ModuleInfo info, File file, ClassLoader cl) {
         if (!(info instanceof JavaLibraryInfo)) return null;
-        return new JavaLibraryModule((JavaLibraryInfo) info, this);
+        Module m = new JavaLibraryModule((JavaLibraryInfo) info, this);
+        try {
+            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+            boolean accessible = method.isAccessible();
+            if (!accessible) {
+                method.setAccessible(true);
+            }
+            URLClassLoader classLoader = (URLClassLoader) Thread.currentThread().getContextClassLoader();
+            URL url = file.toURI().toURL();
+            method.invoke(classLoader, url);
+            method.setAccessible(accessible);
+        } catch (Exception ignore){}
+        loaded.put(info, m);
+        return m;
     }
 
     @Override
@@ -71,24 +86,27 @@ public class JavaLibraryLoader extends JarFileFolderLoader {
 
         @Override
         public String toString() {
-            return "JavaLibraryModule Jar File: `"+info.jarFileName+"`";
+            return "JavaLibraryModule Name: `"+info.getName()+"` Version: `"+info.getVersion()+
+                    "`  Loader: "+loader.toString();
         }
     }
 
-    class JavaLibraryInfo implements ModuleInfo {
-        String jarFileName;
+    class JavaLibraryInfo extends SimpleModuleInfo {
+        String name;
+        String version;
 
         JavaLibraryInfo(String jarFileName) {
-            this.jarFileName = jarFileName;
+            name = jarFileName.replaceAll("^(.*)(-\\d+(\\.\\d+){0,2})(.*)$", "$1");
+            version = jarFileName.replaceAll("^.*-(\\d+(\\.\\d+){0,2}).*$", "$1");
         }
 
         @Override
         public String getName() {
-            return jarFileName;
+            return name;
         }
 
         @Override
-        public String getVersion() { return ""; }
+        public String getVersion() { return version; }
 
         @Override
         public ModuleInfo[] getDepends() {
@@ -97,7 +115,7 @@ public class JavaLibraryLoader extends JarFileFolderLoader {
 
         @Override
         public String toString() {
-            return "JavaLibraryInfo Jar File: `"+jarFileName+"`";
+            return "JavaLibraryInfo Name: `"+name+"` Version: `"+version+"`";
         }
     }
 
