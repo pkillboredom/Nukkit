@@ -117,7 +117,11 @@ public class RakNetInterface implements ServerInstance, AdvancedSourceInterface 
             this.players.put(identifier, player);
             this.identifiersACK.put(identifier, 0);
             this.identifiers.put(player.rawHashCode(), identifier);
+            if(this.server.isAllowUnsafeCrafting()){
+            	player.setAllowUnsafeCrafting(true);
+            }
             this.server.addPlayer(identifier, player);
+            
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
             Server.getInstance().getLogger().logException(e);
         }

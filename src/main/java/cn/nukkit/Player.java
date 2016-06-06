@@ -186,6 +186,8 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
     private final AtomicReference<Locale> locale = new AtomicReference<>(null);
 
     private int hash;
+    
+    protected boolean allowUnsafeCrafting = false;
 
     public TranslationContainer getLeaveMessage() {
         return new TranslationContainer(TextFormat.YELLOW + "%multiplayer.player.left", this.getDisplayName());
@@ -2719,106 +2721,129 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
                 }
 
                 boolean canCraft = true;
+                
+                //unsafe cludge to make windows 10 clients work
+            	//allows for cheating
+                if(isAllowUnsafeCrafting()){
+        			canCraft = true;
+        		}
+        		else{
+        			canCraft=true;
 
-                if (recipe instanceof ShapedRecipe) {
-                    int offsetX = 0;
-                    int offsetY = 0;
+        			if (recipe instanceof ShapedRecipe) {
+        				int offsetX = 0;
+        				int offsetY = 0;
 
-                    if (this.craftingType == 1) {
-                        int minX = -1, minY = -1, maxX = 0, maxY = 0;
-                        for (int x = 0; x < 3 && canCraft; ++x) {
-                            for (int y = 0; y < 3; ++y) {
-                                Item readItem = craftingEventPacket.input[y * 3 + x];
-                                if (readItem.getId() != Item.AIR) {
-                                    if (minY == -1 || minY > y) {
-                                        minY = y;
-                                    }
-                                    if (maxY < y) {
-                                        maxY = y;
-                                    }
-                                    if (minX == -1) {
-                                        minX = x;
-                                    }
-                                    if (maxX < x) {
-                                        maxX = x;
-                                    }
-                                }
-                            }
-                        }
-                        if (maxX == minX) {
-                            offsetX = minX;
-                        }
-                        if (maxY == minY) {
-                            offsetY = minY;
-                        }
-                    }
+        				if (this.craftingType == 1) {
+        					int minX = -1, minY = -1, maxX = 0, maxY = 0;
+        					for (int x = 0; x < 3 && canCraft; ++x) {
+        						for (int y = 0; y < 3; ++y) {
+        							Item readItem = craftingEventPacket.input[y * 3 + x];
+        							if (readItem.getId() != Item.AIR) {
+        								if (minY == -1 || minY > y) {
+        									minY = y;
+        								}
+        								if (maxY < y) {
+        									maxY = y;
+        								}
+        								if (minX == -1) {
+        									minX = x;
+        								}
+        								if (maxX < x) {
+        									maxX = x;
+        								}
+        							}
+        						}
+        					}
+        					if (maxX == minX) {
+        						offsetX = minX;
+        					}
+        					if (maxY == minY) {
+        						offsetY = minY;
+        					}
+        				}
 
-                    //To fix some items can't craft
-                    for (int x = 0; x < 3 - offsetX && canCraft; ++x) {
-                        for (int y = 0; y < 3 - offsetY; ++y) {
-                            item = craftingEventPacket.input[(y + offsetY) * 3 + (x + offsetX)];
-                            Item ingredient = ((ShapedRecipe) recipe).getIngredient(x, y);
-                            //todo: check this https://github.com/PocketMine/PocketMine-MP/commit/58709293cf4eee2e836a94226bbba4aca0f53908
-                            if (item.getCount() > 0) {
-                                if (ingredient == null || !ingredient.deepEquals(item, ingredient.hasMeta(), ingredient.getCompoundTag() != null)) {
-                                    canCraft = false;
-                                    break;
-                                }
+        				//To fix some items can't craft
+        				for (int x = 0; x < 3 - offsetX && canCraft; ++x) {
+        					for (int y = 0; y < 3 - offsetY; ++y) {
+        						item = craftingEventPacket.input[(y + offsetY) * 3 + (x + offsetX)];
+        						Item ingredient = ((ShapedRecipe) recipe).getIngredient(x, y);
+        						//todo: check this https://github.com/PocketMine/PocketMine-MP/commit/58709293cf4eee2e836a94226bbba4aca0f53908
+        						if (item.getCount() > 0) {
+        							if (ingredient == null || !ingredient.deepEquals(item, ingredient.hasMeta(), ingredient.getCompoundTag() != null)) {
+        								canCraft = false;
+        								break;
+        							}
 
-                            }
-                        }
-                    }
+        						}
+        					}
+        				}
 
-                    //If can't craft by auto resize, will try to craft this item in another way
-                    if (!canCraft) {
-                        canCraft = true;
-                        for (int x = 0; x < 3 && canCraft; ++x) {
-                            for (int y = 0; y < 3; ++y) {
-                                item = craftingEventPacket.input[y * 3 + x];
-                                Item ingredient = ((ShapedRecipe) recipe).getIngredient(x, y);
-                                if (item.getCount() > 0) {
-                                    if (ingredient == null || !ingredient.deepEquals(item, ingredient.hasMeta(), ingredient.getCompoundTag() != null)) {
-                                        canCraft = false;
-                                        break;
-                                    }
+        				//If can't craft by auto resize, will try to craft this item in another way
+        				if (!canCraft) {
+        					canCraft = true;
+        					for (int x = 0; x < 3 && canCraft; ++x) {
+        						for (int y = 0; y < 3; ++y) {
+        							item = craftingEventPacket.input[y * 3 + x];
+        							Item ingredient = ((ShapedRecipe) recipe).getIngredient(x, y);
+        							if (item.getCount() > 0) {
+        								if (ingredient == null || !ingredient.deepEquals(item, ingredient.hasMeta(), ingredient.getCompoundTag() != null)) {
+        									canCraft = false;
+        									break;
+        								}
 
-                                }
-                            }
-                        }
-                    }
+        							}
+        						}
+        					}
+        				}
 
-                } else if (recipe instanceof ShapelessRecipe) {
-                    List<Item> needed = ((ShapelessRecipe) recipe).getIngredientList();
+        			} else if (recipe instanceof ShapelessRecipe) {
+        				List<Item> needed = ((ShapelessRecipe) recipe).getIngredientList();
 
-                    for (int x = 0; x < 3 && canCraft; ++x) {
-                        for (int y = 0; y < 3; ++y) {
-                            item = craftingEventPacket.input[y * 3 + x].clone();
+        				for (int x = 0; x < 3 && canCraft; ++x) {
+        					for (int y = 0; y < 3; ++y) {
+        						try{
+        							item = craftingEventPacket.input[y * 3 + x].clone();
+        						}
+        						//unsafe cludge to make windows 10 clients work
+        						//allows for cheating
+        						catch(ArrayIndexOutOfBoundsException e){
+        							if(isAllowUnsafeCrafting()){
+        								canCraft = true;
+        								break;
+        							}
+        							else{
+        								canCraft=false;
+        								break;
+        							}
+        						}
 
-                            for (Item n : new ArrayList<>(needed)) {
-                                if (n.deepEquals(item, n.hasMeta(), n.getCompoundTag() != null)) {
-                                    int remove = Math.min(n.getCount(), item.getCount());
-                                    n.setCount(n.getCount() - remove);
-                                    item.setCount(item.getCount() - remove);
+        						for (Item n : new ArrayList<>(needed)) {
+        							if (n.deepEquals(item, n.hasMeta(), n.getCompoundTag() != null)) {
+        								int remove = Math.min(n.getCount(), item.getCount());
+        								n.setCount(n.getCount() - remove);
+        								item.setCount(item.getCount() - remove);
 
-                                    if (n.getCount() == 0) {
-                                        needed.remove(n);
-                                    }
-                                }
-                            }
+        								if (n.getCount() == 0) {
+        									needed.remove(n);
+        								}
+        							}
+        						}
 
-                            if (item.getCount() > 0) {
-                                canCraft = false;
-                                break;
-                            }
-                        }
-                    }
+        						if (item.getCount() > 0) {
+        							canCraft = false;
+        							break;
+        						}
+        					}
+        				}
 
-                    if (!needed.isEmpty()) {
-                        canCraft = false;
-                    }
-                } else {
-                    canCraft = false;
-                }
+        				if (!needed.isEmpty()) {
+        					canCraft = false;
+        				}
+        			} else {
+        				canCraft = false;
+        			}
+        		}
 
                 List<Item> ingredientsList = new ArrayList<>();
                 if (recipe instanceof ShapedRecipe) {
@@ -3945,7 +3970,21 @@ public class Player extends EntityHuman implements CommandSender, InventoryHolde
         return this.locale.get();
     }
 
-    @Override
+    /**
+	 * @return If unsafe crafting is allowed
+	 */
+	public boolean isAllowUnsafeCrafting() {
+		return allowUnsafeCrafting;
+	}
+
+	/**
+	 * @param Set if unsafe crafting is allowed for this player
+	 */
+	public void setAllowUnsafeCrafting(boolean isWindows10) {
+		this.allowUnsafeCrafting = isWindows10;
+	}
+
+	@Override
     public int hashCode() {
         if ((this.hash == 0) || (this.hash == 485)) {
             this.hash = (485 + (getUniqueId() != null ? getUniqueId().hashCode() : 0));

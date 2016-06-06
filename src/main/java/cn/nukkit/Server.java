@@ -176,6 +176,8 @@ public class Server {
     private Map<Integer, Level> levels = new HashMap<>();
 
     private Level defaultLevel = null;
+    
+    private boolean AllowUnsafeCrafting;
 
     public Server(MainLogger logger, final String filePath, String dataPath, String pluginPath) {
         instance = this;
@@ -273,6 +275,9 @@ public class Server {
         this.baseLang = new BaseLang((String) this.getConfig("settings.language", BaseLang.FALLBACK_LANGUAGE));
         this.logger.info(this.getLanguage().translateString("language.selected", new String[]{getLanguage().getName(), getLanguage().getLang()}));
         this.logger.info(getLanguage().translateString("nukkit.server.start", TextFormat.AQUA + this.getVersion() + TextFormat.WHITE));
+        
+        //Unsafe Crafting Cludge
+        this.AllowUnsafeCrafting = (boolean) this.getConfig("settings.allow-unsafe-crafting", false);
 
         Object poolSize = this.getConfig("settings.async-workers", "auto");
         if (!(poolSize instanceof Integer)) {
@@ -1736,7 +1741,21 @@ public class Server {
         return this.banByIP;
     }
 
-    public void addOp(String name) {
+    /**
+	 * @return the allowUnsafeCrafting
+	 */
+	public boolean isAllowUnsafeCrafting() {
+		return AllowUnsafeCrafting;
+	}
+
+	/**
+	 * @param allowUnsafeCrafting the allowUnsafeCrafting to set
+	 */
+	public void setAllowUnsafeCrafting(boolean allowUnsafeCrafting) {
+		AllowUnsafeCrafting = allowUnsafeCrafting;
+	}
+
+	public void addOp(String name) {
         this.operators.set(name.toLowerCase(), true);
         Player player = this.getPlayerExact(name);
         if (player != null) {
